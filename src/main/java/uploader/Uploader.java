@@ -1,13 +1,11 @@
 package uploader;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class Uploader {
 
@@ -40,38 +38,22 @@ public class Uploader {
             long startTime = System.currentTimeMillis();
 
             Process process = builder.start();
-            int exitCode = process.waitFor();
 
+            StreamGobbler streamGobbler = new StreamGobbler(process.getInputStream(), System.out::println);
+            Executors.newSingleThreadExecutor().submit(streamGobbler);
+
+            int exitCode = process.waitFor();
             long used = System.currentTimeMillis() - startTime;
             System.out.println("finished " + catalog + " -> " + newcatalog + " (" + used + ")");
 
             if (exitCode != 0) {
                 System.out.println("exitcode = " + exitCode + " for " + catalog + " -> " + newcatalog);
-                System.out.println(output(process.getInputStream()));
-                System.out.println(output(process.getErrorStream()));
             }
         } catch (IOException | InterruptedException e) {
             System.out.println("ERROR when uploading " + catalog + " -> " + newcatalog);
             System.out.println(e.toString());
         }
     }
-
-
-    private static String output(InputStream inputStream) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new InputStreamReader(inputStream));
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line + System.getProperty("line.separator"));
-            }
-        } finally {
-            br.close();
-        }
-        return sb.toString();
-    }
-
 
     public static void main(String[] args) {
         String file = null;
